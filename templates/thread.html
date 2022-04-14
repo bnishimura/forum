@@ -1,0 +1,36 @@
+{% extends 'base.html' %}
+
+{% block content %}
+
+<h1>{{ thread.title }}</h1>
+<p>{{ thread.body }}</p>
+<p>{{ thread.author.username }}</p>
+<p>{{ thread.publication_date }}</p>
+<br>
+
+<form action="" method="post">
+    {% csrf_token %}
+    <input type="hidden" name="thread_reply" value="{{ thread.id }}">
+    {{ form.as_p }}
+    <input type="submit" value="Submit">
+</form>
+
+{% for post in posts %}
+    <p>{{ post.body }}</p>
+    <p>{{ post.author.username }}</p>
+    <p>{{ post.publication_date }}</p>
+
+    <form action="" method="post">
+        {% csrf_token %}
+        <input type="hidden" name="post_reply" value="{{ post.id }}">
+        {{ form.as_p }}
+        <input type="submit" value="Submit">
+    </form>
+
+    {% if post.id in replies %}
+        {% include "put_reply.html" %}
+    {% endif %}
+
+{% endfor %}
+
+{% endblock content %}

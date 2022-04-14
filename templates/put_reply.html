@@ -1,0 +1,17 @@
+{% load custom_filters %}
+
+{% for reply in replies|pass_key:post.id %}
+<div class="">
+    <p>{{ reply.body }}</p>
+    <p>{{ reply.author }}</p>
+    <p>{{ reply.publication_date }}</p>
+
+    {% if reply.id in replies %}
+        {% with reply as post %}
+            {% include "put_reply.html" %}
+        {% endwith %}
+    {% endif %}
+</div>
+
+{% endfor %}
+

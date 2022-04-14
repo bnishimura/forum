@@ -1,0 +1,16 @@
+{% extends 'base.html' %}
+{% block content %}
+
+{% for category, subforum_list in layout.items %}
+<h1>{{ category }}</h1>
+
+    {% for subforum in subforum_list %}
+    <h2><a href="{% url 'subforum' subforum.path %}">
+           {{ subforum.title }}
+    </a></h2>
+    <p>{{ subforum.description }}</p>
+
+    {% endfor %}
+
+{% endfor %}
+{% endblock content %}
