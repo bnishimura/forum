@@ -2,17 +2,20 @@
 
 {% block content %}
 
-<h1>{{ subforum }}</h1>
+<h1>{{ subforum.title }}</h1>
 
 <div>
-    <a href="{% url 'new_thread' subforum %}">New Thread</a>
+    <a href="{% url 'new_thread' subforum.path %}">New Thread</a>
 </div>
 
 {% for thread in thread_list %}
     <h2>{{ thread.title }}</h2>
     <h3>{{ thread.author }}</h3>
     <h4>{{ thread.publication_date }}</h4>
-    <button type="submit"><a href="{% url 'thread' subforum thread.slug %}">Reply</a></button>
+
+    {% if user is not thread.author %}
+    <button type="submit"><a href="{% url 'thread' subforum.path thread.slug %}">View Thread</a></button>
+    {% endif %}
 
 {% endfor %}
 

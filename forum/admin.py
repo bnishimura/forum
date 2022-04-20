@@ -3,7 +3,7 @@ from .models import Category, Subforum, Post, Thread
 
 
 class ThreadAdmin(admin.ModelAdmin):
-    propopulated_fields = {"slug": ("title",)}
+    prepopulated_fields = {"slug": ("title",)}
     
 
 admin.site.register(Category)

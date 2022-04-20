@@ -1,5 +1,9 @@
+.git
 .gitignore
 .env
 .venv
+.dockerignore
 
 db.sqlite3
+
+backup

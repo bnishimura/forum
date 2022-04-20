@@ -1,8 +1,15 @@
 from django import template
 from django.utils.text import slugify
 from django.shortcuts import render, get_object_or_404
-from django.views.generic import ListView, CreateView, View
+from django.views.generic import (ListView, 
+        CreateView, 
+        View,
+        UpdateView,
+        DeleteView,)
+from django.contrib.auth import get_user_model
 from django.contrib.auth.models import User
+from django.contrib.auth.mixins import (LoginRequiredMixin, 
+        UserPassesTestMixin)
 from django.http import HttpResponse, HttpResponseRedirect
 from django.urls import reverse
 from .models import Subforum, Category, Post, Thread
@@ -45,7 +52,7 @@ class SubforumView(ListView):
         path = self.kwargs['subforum']
         curr_subforum = Subforum.objects.get(path=path)
         # in the future we set subforum to the entire object
-        context = { 'subforum': curr_subforum.path }
+        context = { 'subforum': curr_subforum }
         queryset = Thread.objects.filter(subforum__path=path)
         context['thread_list'] = queryset
         return context
@@ -55,13 +62,12 @@ class ThreadView(View):
     template_name = 'thread.html'
     form = PostForm()
 
-    def get_replies(self, reply_context, post):
-        # appends replies to context
-        replies = Post.objects.filter(reply=post.id)
+    def get_replies(self, reply_context, post, depth=1):
+        replies = Post.objects.filter(repliesTo=post.id)
         if replies:
-            reply_context[post.id] = replies
+            reply_context[post.id] = (depth, replies)
             for reply in replies:
-                self.get_replies(reply_context, reply)
+                self.get_replies(reply_context, reply, depth+1)
 
     def get(self, request, *args, **kwargs):
         context = {}
@@ -74,7 +80,8 @@ class ThreadView(View):
         reply_context = {}
         for post in posts:
             self.get_replies(reply_context, post)
-        context['replies'] = reply_context
+        # pairs are (depth, reply_queryset) pairs
+        context['pairs'] = reply_context
 
         t = template.loader.get_template(self.template_name)
         return HttpResponse(t.render(context, request=request))
@@ -84,11 +91,11 @@ class ThreadView(View):
         We differentiate posts and replies even though they are
         both instances of Post
         '''
-        author = User.objects.get(id=request.POST['author'])
-        print(request.POST)
+        author = User.objects.get(username=request.user)
 
         if 'thread_reply' in request.POST:
-            threadReplied = Thread.objects.get(id=request.POST['thread_reply'])
+            threadReplied = Thread.objects.get(
+                    id=request.POST['thread_reply'])
 
             post = Post(body = request.POST['body'],
                     author = author,
@@ -99,34 +106,133 @@ class ThreadView(View):
             postReplied = Post.objects.get(id=request.POST['post_reply'])
             reply = Post(body = request.POST['body'],
                     author = author,
-                    reply = postReplied)
+                    repliesTo = postReplied)
             reply.save()
 
         redirectTo = reverse('thread',
                 args = [kwargs['subforum'], kwargs['slug']])
-        print(redirectTo)
         return HttpResponseRedirect(redirectTo)
 
-class ThreadCreateView(CreateView):
+class ThreadCreateView(LoginRequiredMixin, CreateView):
     # shows all posts replying to a given thread
 
     template_name = 'new_thread.html'
     form_class = ThreadForm
 
-    def post(self, request, *args, **kwargs):
-        subforum_obj = Subforum.objects.get(title=kwargs['subforum'])
-        # form is getting a user_id THIS HAS TO BE DELETED LATER
-        author_obj = User.objects.get(pk=request.POST['author'])
+    def form_valid(self, form):
+        form.instance.author = self.request.user
+        return super().form_valid(form)
 
-        # remove author later
+    def post(self, request, *args, **kwargs):
+        subforum_obj = Subforum.objects.get(path=kwargs['subforum'])
+        # author_obj = User.objects.get(pk=request.user.id)
+
         thread = Thread(title = request.POST['title'],
                 body = request.POST['body'],
-                author = author_obj,
+                author = self.request.user,
                 subforum = subforum_obj,
-                slug = slugify(request.POST['body']),
+                slug = slugify(request.POST['title']),
                 )
         thread.save()
 
         # redirect to /<subforum>/<thread>/
         redirectTo = '/' + kwargs['subforum'] + '/' + thread.slug
         return HttpResponseRedirect(redirectTo)
+
+class ThreadEditView(LoginRequiredMixin, UserPassesTestMixin, UpdateView):
+
+    model = Thread
+    fields = ('body', )
+    template_name = 'thread_edit.html'
+
+    def get_object(self):
+        return Thread.objects.get(slug=self.kwargs['slug'])
+
+    def get_success_url(self):
+        subforum_slug = self.kwargs['subforum']
+        thread_slug = self.kwargs['slug']
+        return reverse('thread',
+                args=[subforum_slug, thread_slug])
+
+    def test_func(self):
+        obj = self.get_object()
+        return obj.author == self.request.user
+
+
+class PostEditView(LoginRequiredMixin, UserPassesTestMixin, UpdateView):
+
+    model = Post
+    fields = ('body', )
+    template_name = 'post_edit.html'
+
+    def get_object(self):
+        return Post.objects.get(id=self.kwargs['pid'])
+
+    def get_success_url(self):
+        subforum_slug = self.kwargs['subforum']
+        thread_slug = self.kwargs['slug']
+        return reverse('thread', 
+                args=[subforum_slug, thread_slug])
+
+    def test_func(self):
+        obj = self.get_object()
+        return obj.author == self.request.user
+
+class ThreadDeleteView(LoginRequiredMixin, UserPassesTestMixin, DeleteView):
+    # this probably doesnt need to inherit DeleteView
+    model = Thread
+    template_name = 'thread_delete.html'
+
+    def get_object(self):
+        return Thread.objects.get(slug=self.kwargs['slug'])
+
+    def get_success_url(self):
+        return reverse('subforum', args=[self.kwargs['subforum']])
+        
+    def test_func(self):
+        obj = self.get_object()
+        return obj.author == self.request.user
+
+    def get_sentinel_user(self):
+        return get_user_model().objects.get_or_create(
+                username="[deleted]")[0]
+
+    def post(self, request, *args, **kwargs):
+        thread = self.get_object()
+        comments = Post.objects.get(thread=thread)
+
+        thread.author = self.get_sentinel_user()
+        thread.save() 
+
+        return HttpResponseRedirect(self.get_success_url())
+
+class PostDeleteView(LoginRequiredMixin, UserPassesTestMixin, DeleteView):
+    # this probably doesnt need to inherit DeleteView
+    model = Post
+    template_name = 'post_delete.html'
+
+    def get_success_url(self):
+        subforum_slug = self.kwargs['subforum']
+        thread_slug = self.kwargs['slug']
+        return reverse('thread', 
+                args=[subforum_slug, thread_slug])
+
+    def get_object(self):
+        return Post.objects.get(id=self.kwargs['pid'])
+
+    def get_sentinel_user(self):
+        return get_user_model().objects.get_or_create(
+                username="[deleted]")[0]
+
+    def test_func(self):
+        obj = self.get_object()
+        return obj.author == self.request.user
+
+    def post(self, request, *args, **kwargs):
+        post = self.get_object()
+        sentinel = self.get_sentinel_user()
+
+        post.author = sentinel
+        post.save()
+
+        return HttpResponseRedirect(self.get_success_url())

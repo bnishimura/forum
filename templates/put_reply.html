@@ -1,17 +1,44 @@
 {% load custom_filters %}
 
-{% for reply in replies|pass_key:post.id %}
-<div class="">
-    <p>{{ reply.body }}</p>
-    <p>{{ reply.author }}</p>
-    <p>{{ reply.publication_date }}</p>
+{% with pairs|pass_key:post.id as pair %}
+{% with depth=pair|get_elem:0 reply_list=pair|get_elem:1 %}
+    {% for reply in reply_list %}
 
-    {% if reply.id in replies %}
-        {% with reply as post %}
-            {% include "put_reply.html" %}
-        {% endwith %}
-    {% endif %}
-</div>
+    <div class="" style="margin-left:{{ depth|multiply:50 }}px;">
+        <p>{{ reply.body }}</p>
+        <p>{{ reply.author }}</p>
+        <p>{{ reply.publication_date }}</p>
 
-{% endfor %}
+        {% if user.id == reply.author.id %}
+        <!-- edit button -->
+        <button type="submit">
+        <a href="{% url 'edit_post' thread.subforum.path thread.slug reply.id %}">Edit</a>
+        </button>
 
+        <!-- delete button -->
+        <button type="submit">
+        <a href="{% url 'delete_post' thread.subforum.path thread.slug reply.id %}">Delete</a>
+        </button>
+
+        {% endif %}
+
+        {% if user.is_authenticated %}
+        <!-- reply form -->
+        <form action="" method="post">
+            {% csrf_token %}
+            <input type="hidden" name="post_reply" value="{{ reply.id }}">
+            {{ form.as_p }}
+            <input type="submit" value="Submit">
+        </form>
+        {% endif %}
+
+        {% if reply.id in pairs %}
+            {% with reply as post %}
+                {% include "put_reply.html" %}
+            {% endwith %}
+        {% endif %}
+    </div>
+
+    {% endfor %}
+{% endwith %}
+{% endwith %}

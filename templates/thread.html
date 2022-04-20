@@ -8,6 +8,18 @@
 <p>{{ thread.publication_date }}</p>
 <br>
 
+{% if user.id == thread.author.id %}
+<!-- edit button -->
+<button type="submit">
+<a href="{% url 'edit_thread' thread.subforum.path thread.slug %}">Edit</a>
+</button>
+
+<!-- delete button -->
+<button type="submit">
+<a href="{% url 'delete_thread' thread.subforum.path thread.slug %}">Delete</a>
+</button>
+{% endif %}
+
 <form action="" method="post">
     {% csrf_token %}
     <input type="hidden" name="thread_reply" value="{{ thread.id }}">
@@ -20,14 +32,29 @@
     <p>{{ post.author.username }}</p>
     <p>{{ post.publication_date }}</p>
 
+    {% if user.id == post.author.id %}
+    <!-- edit button -->
+    <button type="submit">
+    <a href="{% url 'edit_post' thread.subforum.path thread.slug post.id %}">Edit</a>
+    </button>
+
+    <!-- delete button -->
+    <button type="submit">
+    <a href="{% url 'delete_post' thread.subforum.path thread.slug post.id %}">Delete </a>
+    </button>
+    {% endif %}
+
+    {% if user.is_authenticated %}
+    <!-- reply form -->
     <form action="" method="post">
         {% csrf_token %}
         <input type="hidden" name="post_reply" value="{{ post.id }}">
         {{ form.as_p }}
         <input type="submit" value="Submit">
     </form>
+    {% endif %}
 
-    {% if post.id in replies %}
+    {% if post.id in pairs %}
         {% include "put_reply.html" %}
     {% endif %}
 
