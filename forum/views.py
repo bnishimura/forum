@@ -45,6 +45,8 @@ class SubforumView(ListView):
     template_name = 'subforum.html'
 
     def get_queryset(self):
+        # if multiple categories have subfora with the same name
+        # there will be errors.
         return Subforum.objects.get(path=self.kwargs['subforum'])
 
     def get_context_data(self, **kwargs):
@@ -142,7 +144,7 @@ class ThreadCreateView(LoginRequiredMixin, CreateView):
 class ThreadEditView(LoginRequiredMixin, UserPassesTestMixin, UpdateView):
 
     model = Thread
-    fields = ('body', )
+    fields = ('title', 'body',)
     template_name = 'thread_edit.html'
 
     def get_object(self):
