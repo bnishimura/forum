@@ -24,6 +24,10 @@ class Subforum(models.Model):
     category = models.ForeignKey(Category, on_delete=models.CASCADE)
     path = models.SlugField(max_length=50, null=True)
 
+    def save(self, *args, **kwargs):
+        self.path = slugify(self.title)
+        return super().save(*args, **kwargs)
+
     def __str__(self):
         return self.title
 
