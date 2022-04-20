@@ -4,6 +4,4 @@
 .venv
 .dockerignore
 
-db.sqlite3
-
 backup
