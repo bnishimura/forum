@@ -20,7 +20,7 @@
 </button>
 {% endif %}
 
-{% if user.authenticated %}
+{% if user.is_authenticated %}
 <form action="" method="post">
     {% csrf_token %}
     <input type="hidden" name="thread_reply" value="{{ thread.id }}">
@@ -28,7 +28,9 @@
     <input type="submit" value="Submit">
 </form>
 {% else %}
-<p><a href="{% url "login" %}">Log in</a> to reply to this thread and posts within</p>
+<p><a href="{% url "login" %}">Log in</a> 
+or <a href="{% url "signup" %}">Sign up</a> 
+to reply to this thread and posts within</p>
 {% endif %}
 
 {% for post in posts %}
