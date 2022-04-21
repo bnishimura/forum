@@ -1,4 +1,5 @@
 <!doctype html>
+{% load custom_filters %}
 <html>
 
     <head>
@@ -9,7 +10,18 @@
     <body>
 
         <header>
-            {% include 'path_chain.html' %}
+            {% if request.path != '' %}
+
+            <p><a href="{% url 'home' %}">Home</a>
+            {% with request.path|make_chain as path_chain %}
+
+            {% for link in path_chain %}
+            &gt;<a href="{{ link|get_elem:1 }}"> {{ link|get_elem:0 }} </a>
+
+            {% endfor %}
+            {% endwith %}
+            </p>
+            {% endif %}
         </header>
 
         {% if user.is_authenticated %}

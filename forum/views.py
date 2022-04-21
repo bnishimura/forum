@@ -59,7 +59,7 @@ class SubforumView(ListView):
         context['thread_list'] = queryset
         return context
 
-class ThreadView(LoginRequiredMixin, View):
+class ThreadView(View):
 
     template_name = 'thread.html'
     form = PostForm()
@@ -95,6 +95,7 @@ class ThreadView(LoginRequiredMixin, View):
         '''
         author = User.objects.get(username=request.user)
 
+        # user must be authenticated to post
         if 'thread_reply' in request.POST:
             threadReplied = Thread.objects.get(
                     id=request.POST['thread_reply'])

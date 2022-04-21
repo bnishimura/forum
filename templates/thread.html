@@ -20,12 +20,16 @@
 </button>
 {% endif %}
 
+{% if user.authenticated %}
 <form action="" method="post">
     {% csrf_token %}
     <input type="hidden" name="thread_reply" value="{{ thread.id }}">
     {{ form.as_p }}
     <input type="submit" value="Submit">
 </form>
+{% else %}
+<p><a href="{% url "login" %}">Log in</a> to reply to this thread and posts within</p>
+{% endif %}
 
 {% for post in posts %}
     <p>{{ post.body }}</p>
