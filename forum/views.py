@@ -59,7 +59,7 @@ class SubforumView(ListView):
         context['thread_list'] = queryset
         return context
 
-class ThreadView(View):
+class ThreadView(LoginRequiredMixin, View):
 
     template_name = 'thread.html'
     form = PostForm()
